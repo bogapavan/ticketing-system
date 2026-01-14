@@ -1,0 +1,106 @@
+
+## Features
+
+* Create events with a fixed number of tickets
+* Book tickets with strong concurrency guarantees
+* Enforce **max 2 tickets per user per event**
+* Cancel bookings and return tickets to the pool
+* Safe handling of race conditions for the last seat
+* One-command startup using Docker
+
+---
+
+## Tech Stack
+* **Language**: Python 3
+* **Framework**: Django + Django REST Framework
+* **Database**: PostgreSQL
+* **Containerization**: Docker, Docker Compose
+---
+
+## Prerequisites
+
+* Docker (v20+)
+* Docker Compose (v2+)
+> No local Python or PostgreSQL installation required.
+---
+
+## How to Run
+
+docker compose up --build
+
+What happens automatically:
+
+* PostgreSQL container starts
+* Django runs migrations
+* Django server starts at http://localhost:8000
+---
+
+## API Endpoints
+
+
+### 1. Initialize Event
+**POST** /events/
+{
+  "name": "Concert",
+  "tickets": 3
+}
+**Response**
+{
+  "event_id": 1
+}
+---
+
+
+### 2. Book Ticket
+
+**POST** /book/
+{
+  "user_id": 1,
+  "event_id": 1
+}
+**Success**
+{
+  "status": "booked"
+}
+**Failure**
+{
+  "error": "No tickets available or limit exceeded"
+}
+---
+
+### 3. Cancel Ticket
+
+**POST** /cancel/
+{
+  "user_id": 1,
+  "event_id": 1
+}
+**Response**
+{
+  "status": "cancelled"
+}
+---
+
+## Project Structure
+ticketing-system/
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── decisions.md
+├── manage.py
+├── ticketing/
+│   ├── settings.py
+│   ├── urls.py
+└── events/
+    ├── migrations/
+    │   └── 0001_initial.py
+    ├── models.py                    # Db schema
+    ├── serializers.py               # For input validation and modification
+    ├── views.py                     # client and server Req sent or received
+    ├── urls.py                      # app endpoint urls
+    ├── repositories.py
+    └── tests.py
+        ├── test_concurrent_bookings.py
+        └── test_events.py
+
+---

@@ -1,0 +1,6 @@
+Django>=5.0
+djangorestframework
+psycopg2-binary
+pytest==8.0.0
+pytest-django==4.8.0
+pytest-xdist==3.6.1
