@@ -7,6 +7,8 @@
 * Cancel bookings and return tickets to the pool
 * Safe handling of race conditions for the last seat
 * One-command startup using Docker
+** Concurrency correctness verified via automated multi-threaded test cases
+
 
 ---
 
@@ -34,58 +36,50 @@ What happens automatically:
 - Django server starts at http://localhost:8000
 - Test cases run automatically via the `test` service and give OK in console
 
-##Test cases
+### Test cases
 - You can refer to the all testcases in events/tests/ folder.
 - If you want the test cases to run explicitly again :
+    ```bash
+    docker compose run --rm test
 
-   docker compose run --rm test
+- On startup, all automated tests run and must pass successfully.
+    <==CONSOLE OUTPUT==>
+    Ran 9 tests in X.XXXs
+    OK
+    <==================>
 
-- Gives "Ran 9 tests......"   with "OK" msg in console with no errors.
 
+## API Endpoints (Manual Verification Only)
 
-## API Endpoints
+Note:
+-All critical business logic — including concurrency, race conditions,
+ ticket limits, and duplicate bookings — is fully covered by automated test cases.
+-Manual curl commands below are provided only for basic API verification.
 
 ### 1. Initialize Event
-**POST** /events/
-{
-  "name": "Concert",
-  "tickets": 3
-}
-**Response**
-{
-  "event_id": 1
-}
----
 
+>curl -X POST http://localhost:8000/api/events/ -H "Content-Type: application/json" -d "{ \"name\": \"Concert\", \"total_tickets\": 100 }"
+**Response**
+{"event_id":1}
 
 ### 2. Book Ticket
 
-**POST** /book/
-{
-  "user_id": 1,
-  "event_id": 1
-}
-**Success**
-{
-  "status": "booked"
-}
-**Failure**
-{
-  "error": "No tickets available or limit exceeded"
-}
----
+curl -X POST http://localhost:8000/api/events/1/book/ -H "Content-Type: application/json" -d "{ \"user_id\": 101, \"tickets\": 2 }"
+**Response**
+{"success":"Booked"}
+
+Book again
+
+>curl -X POST http://localhost:8000/api/events/1/book/ -H "Content-Type: application/json" -d "{ \"user_id\": 101, \"tickets\": 2 }"
+**Response**
+{"error":"Max 2 tickets per user"}
 
 ### 3. Cancel Ticket
 
-**POST** /cancel/
-{
-  "user_id": 1,
-  "event_id": 1
-}
+curl -X POST http://localhost:8000/api/events/1/cancel/ -H "Content-Type: application/json" -d "{ \"user_id\": 101 }"
 **Response**
-{
-  "status": "cancelled"
-}
+{"success":"Cancelled"}
+
 ---
 
 
