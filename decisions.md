@@ -1,8 +1,3 @@
-# Architectural & Design Decisions
-
-This document explains the key technical decisions made while designing the ticket booking system, with a focus on correctness under concurrency, simplicity, and interview-level clarity.
-
----
 
 ## 1. Why This Database Structure?
 
@@ -15,7 +10,7 @@ This document explains the key technical decisions made while designing the tick
   - `event_id`
   - `user_id`
   - `tickets_booked`
-  - Unique constraint on `(event_id, user_id)`
+  - Unique constraint on `(event_id, user_id)` with indexing
 
 ### Reasoning
 
@@ -34,8 +29,9 @@ Instead of calculating availability dynamically from bookings:
 - Avoids expensive aggregation queries during peak traffic
 
 ### c) Database-Level Constraints
-- Unique constraint ensures business invariants are enforced even if application logic fails
-- Shifts correctness guarantees closer to the data layer
+- Unique constraint enforces one booking per user per event, serving as a safety net.
+- It also creates a composite index on (event_id, user_id) for fast lookups.
+
 
 ### Why PostgreSQL?
 - Strong transactional guarantees (ACID)
@@ -56,17 +52,14 @@ This guarantees:
 - No overselling of tickets
 - Strong consistency during booking and cancellation
 
----
 
-### Alternative 1: In-Memory Locks (Rejected)
+### Alternative 1: Redis / Distributed Locks
 **Why considered:**
-- Simple to implement
+- Scales better horizontally
 
-**Why rejected:**
-- Fails in multi-instance deployments
-- Does not work across containers or machines
-- Unsafe in real distributed systems
-
+**Why rejected for this assignment:**
+- Adds operational complexity
+- Requires careful TTL handling and failure recovery
 ---
 
 ### Alternative 2: Optimistic Locking (Version Columns)
@@ -79,27 +72,15 @@ This guarantees:
 - Worse user experience during peak traffic
 
 ---
-
-### Alternative 3: Redis / Distributed Locks
-**Why considered:**
-- Scales better horizontally
-
-**Why rejected for this assignment:**
-- Adds operational complexity
-- Requires careful TTL handling and failure recovery
-- Overkill for a 2–4 hour take-home assignment
-
----
-
-### Alternative 4: Queue-Based Booking (Async)
+### Alternative 3: Queue-Based Booking (Async)
 **Why considered:**
 - Very scalable
 - Handles bursts well
 
 **Why rejected:**
-- Introduces eventual consistency
-- Booking confirmation becomes asynchronous
-- Not aligned with simple REST API requirement
+- Introduces eventual consistency, as tickets are confirmed asynchronously
+- Users do not receive immediate confirmation, which changes UX
+- Adds complexity not required for this synchronous booking API
 
 ---
 
@@ -140,12 +121,10 @@ To reach ~1M RPS, the design would evolve:
 - Workers process bookings sequentially per event
 - Client receives async confirmation
 
-#### d) Reservation + Expiry Model
+#### d) Reservation + Expiry Model(required when async booking introduced)
 - Temporary ticket holds with expiration
 - Final confirmation after payment
 - Reduces contention on final inventory
-
----
 
 ## Final Note
 
@@ -153,6 +132,3 @@ This system intentionally prioritizes:
 - Correctness over throughput
 - Simplicity over premature optimization
 - Clear transactional guarantees
-
-The architecture is designed to be **easy to reason about, easy to test, and safe under concurrency**, while leaving clear paths for future scalability.
-

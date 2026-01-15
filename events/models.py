@@ -13,4 +13,9 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("event", "user_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "user_id"],
+                name="unique_event_user"
+            )
+        ]

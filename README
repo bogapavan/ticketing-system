@@ -26,17 +26,24 @@
 
 ## How to Run
 
-docker compose up --build
+docker compose up
 
 What happens automatically:
 
-* PostgreSQL container starts
-* Django runs migrations
-* Django server starts at http://localhost:8000
----
+- PostgreSQL container starts
+- Django server starts at http://localhost:8000
+- Test cases run automatically via the `test` service and give OK in console
+
+##Test cases
+- You can refer to the all testcases in events/tests/ folder.
+- If you want the test cases to run explicitly again :
+
+   docker compose run --rm test
+
+- Gives "Ran 9 tests......"   with "OK" msg in console with no errors.
+
 
 ## API Endpoints
-
 
 ### 1. Initialize Event
 **POST** /events/
@@ -81,26 +88,22 @@ What happens automatically:
 }
 ---
 
-## Project Structure
-ticketing-system/
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-├── decisions.md
-├── manage.py
-├── ticketing/
-│   ├── settings.py
-│   ├── urls.py
-└── events/
-    ├── migrations/
-    │   └── 0001_initial.py
-    ├── models.py                    # Db schema
-    ├── serializers.py               # For input validation and modification
-    ├── views.py                     # client and server Req sent or received
-    ├── urls.py                      # app endpoint urls
-    ├── repositories.py
-    └── tests.py
-        ├── test_concurrent_bookings.py
-        └── test_events.py
+
+## Ticket Booking Request Flow
+
+| Layer / File      | Responsibility |
+|------------------|----------------|
+| Client            | Sends HTTP request |
+| urls.py           | Routes request to view |
+| views.py          | Receives request, calls serializer & service, returns response |
+| serializers.py    | Validates request fields |
+| services.py       | Business logic: locks event, checks max tickets, updates booking & available_tickets |
+| repositories.py   | Abstract DB access for Event and Booking |
+| models.py         | Database tables with constraints & indexes |
+| Database          | Persists data & enforces constraints |
+| views.py          | Returns HTTP response |
+
+Client → urls.py → views.py → serializers.py → services.py → repositories.py → models.py → Database
+      ← Response back to client
 
 ---
